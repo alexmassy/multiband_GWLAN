@@ -1,0 +1,173 @@
+# gwlan-input.ini
+# Config file for Green WLAN
+
+# Power consumption model
+# -----------------------
+# Numero di classi; default = 1 
+# Attenzione, i campi non indicizzati non sono più letti! 
+n_AP_classes = 1
+#~ Peso di ogni classe, ne determina la proporzione sul totale (ANCORA DA IMPLEMENTARE!!!)
+#~ class_weight[1] = 1
+#~ class_weight[2] = 1
+#~ class_weight[3] = 1
+#~ class_weight[4] = 1
+#~ class_weight[5] = 1
+#P_zero = 12		# Watt, Cisco Aironet 600
+P_zero[1] = 4.8
+P_zero[2] = 6.0
+P_zero[3] = 9.6
+P_zero[4] = 1.2
+# numero di livelli; utilizzato per psm=1,2,3
+# Cisco Aironet 3600 ha 8 possibili livelli di potenza, da 2 a 23 dBm con incrementi di 3 dBm
+# WRT54GL: 4 livelli di potenza, da 6 a 15 dBm con incrementi di 3 dBm
+n_Pwr-Level = 1
+# pwr-step-mode:
+# - 0 (valori tabulati, nella forma "PT_tab = value1,value2,..." - il numero dei valori dovrebbe coincidere con n_Pwr-Level)
+# -	1 (lineare fra PT_max e PT_max)
+# - 2 (geometrico = lineare in dB, fra PT_max e PT_max)
+# - 3 (scalinata a 3dB partendo da PT_max)
+pwr-step-mode = 0
+PT_max = 0.4		# W
+PT_min = 0.0125		# W
+PT_tab = 0.032,0.016,0.008,0.004	# W
+# eta_tab replaces eta; if eta must be a constant, just type "eta_tab = xxx"; nota: eta * P_T = eta_T
+#eta_tab = 32,56,104,188
+eta_tab[1] = 75,127,218,409
+eta_tab[2] = 94,166,306,553
+eta_tab[3] = 38,67,119,225
+eta_tab[4] = 150,279,496,863
+# the new mu[j] parameter, either a random value from a uniform distrib: mu[j] = mu_j_avg +/- mu_j_delta, or an indexed value
+#mu_j_avg = 0.45		# mJ
+#mu_j_delta = 0.40	# mJ
+mu[1] = 1.28
+mu[2] = 0.8
+mu[3] = 0.32
+mu[4] = 1.6
+# the power consumption for frame reception: P_demod = eta_R
+P_demod[1] = 1.6		# W
+P_demod[2] = 2.0		# W
+P_demod[3] = 1.2		# W
+P_demod[4] = 3.6		# W
+
+
+# Path loss model
+# ---------------
+# general  
+central_frequency-MHz = 2400	# MHz
+# il guadagno di antenna nei vari modelli è variabile fra 2 e 4/5 dBi
+#antenna_gain-dB = 3
+antenna_gain-dB = 2
+attenuation_factor = 2.34
+#OLD:attenuation_factor = 2.66
+# path loss model: 0 = indoor LOS (default), 1 = multi-wall NLOS
+PL-model = 1
+# indoor LOS 
+# "ref-path-loss-dB" is optional; if negative is computed automatically (free space formula)
+ref-distance = 1		# m
+ref-path-loss-dB = -1
+# indoor multi-wall NLOS
+# "overall-multi-wall-loss-dB" is optional; if present and not negative will replace all other terms
+# the number of walls/columns can be either static (set num-of-walls and num-of-colums to non-negative) or automatic (set wall-separation and column-separation to positive)
+const-path-loss-mw-dB = 14.2
+overall-multi-wall-loss-dB = -1
+#wall-loss-dB = 3.5;
+wall-loss-dB = 1.4
+#column-loss-dB = 6;
+column-loss-dB = 2
+num-of-walls = -1
+num-of-columns = -1
+wall-separation = 8		# m
+column-separation = 20	# m
+
+# Rate computation
+# ----------------
+noise-dB = -125
+# nota: per la sensibilità va indicato il minimo (la variabilità è gestita dalla formula del rate)
+# Valori presi dal Cisco Aironet 2600
+recv-pwr_threshold-dB = -121
+SNIR_threshold-dB = 5
+# rate-formula: 
+# 0 = approx.lineare ( r = theta * SNR ) (default), 
+# 1 = logaritmica ( r = beta * SNR[dB] + delta )
+# 2 = Shannon ( r = zeta * B * log(1+SNIR) )
+rate-formula = 1
+# all parameters must convert to kbps!!!
+#~ theta = 5100		# b/s
+#~ beta = 1.76		# Mb/s
+#~ delta = -7.48	# Mb/s
+theta = 5.1			# kb/s
+beta = 1760			# kb/s
+delta = -7480		# kb/s
+# Parameters for Shannon formula, B in Mbps
+zeta = 0.07
+#~ B = 54			# Mb/s
+B = 54000			# kb/s
+# max throughput a livello fisico sostenibile da ciascun AP/utente
+# valore in kbps!
+#max-rate = 18000
+max-rate = 54000	# kb/s
+
+# Traffic model
+# -------------
+# intervallo della domanda degli utenti (a livello IP/applicativo)
+# max_demand = 165	# kb/s
+# min_demand = 135	# kb/s
+# set to 1 to autogenerate the demand interval
+# if autogen_demand = 1, i valori max_demand e min_demand sono ignorati
+autogen_demand = 0
+# fattore di saturazione della rete
+# in pratica è il fattore di riduzione del valore medio limite (vml) autocalcolato 
+util_factor = 0.5
+# fattore di larghezza dell'intervallo autogenerato, come multiplo del vml
+# deve essere compreso fra 0 e 2 (0 = tutti uguali al vml, 2 = variabile tra 0 e 2*vml)
+exp_factor = 1.6
+# frazione di traffico in downlink (ovviamente: uplink + downlink = 1)
+#~ dl_fraction = 0.75
+# max airtime of the APs (aka rho)
+max_airtime = 1.0
+
+# OSI stack model
+# ---------------
+# opzionale: fattore di scala dovuto all'overhead protocollare: converte goodput dal livello MAC al livello APP/IP
+overhead_factor = 3
+# valori per determinare la lunghezza dei frame a livello MAC (MSDU); frame_len ha la precedenza; default msdu = 1500 B
+# - frame_len = msdu in bit
+# - datagram_len = payload a livello applicativo, in byte
+# - overhead_len = protocol overhead, from APP to LLC (e.g. headers), in byte
+# se nessuno è specificato, il default è msdu = 1500 B
+frame_len = 6000	# bit
+datagram_len = 700	# B
+overhead_len = 32	# B
+
+# Topology
+# ----------
+# set AP-user distance to this value [m] (if 0, disable check)
+min_dist_AP-user = 1	# m
+# AP deployment strategy: 0 = full random, 1 = big squares, 2 = dual UT density (based on squares)
+deploy_strat = 1
+# the fraction of users in the high-density region (hdr); applies to deploy_strat = 2 only; should be > 0.5
+# note: the size of hdr is the complement of frac_UT_hdr, e.g. frac_UT_hdr=0.7 => 70% users are in 30% of area
+frac_UT_hdr = 0.6
+ 
+# now fixed parameters
+n_Pwr-Level = 1
+max_demand = 110
+min_demand = 90
+dl_fraction = 0.75
+ 
+# INOC 2015
+max_speed = 1.0
+#delta_t = 0.5
+#variance_present_pos = 0.3
+#variance_future_pos = 0.1
+#quantile = 0.05
+#frac_moving_UT = 0.2
+#sigma_rayleigh = 0.7
+
+
+#number of bands used for the movements in multiband model
+n_of_bands = 3
+
+#max radius of movement will be computed as a percentage of field_size_X
+#NOTE: here use float values (e.g. if you mean 15%, instead of typing '15', type '0.15')
+max_perc_mov = 0.15

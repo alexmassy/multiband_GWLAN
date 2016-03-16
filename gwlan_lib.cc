@@ -1,6 +1,8 @@
 #include "gwlan_lib.hpp"
 
-
+/*
+* MULTIBAND model
+*/
 void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
                      IloNumArray  p_w, IloNum rho, IloNumArray w, IloNumArray2D r_curr, 
 					 IloNumArray3D r_min, IloInt K, IloNumArray H)
@@ -121,6 +123,9 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
 }// END createMultibandAlgMILP
  
 
+/*
+* NOMINAL model
+*/
 void
 createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
              IloNumArray p_w, IloNum rho, IloNumArray w, IloNumArray2D r)

@@ -102,7 +102,7 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
 	   expr.end();
    }
  
-   
+  
    // constraint #36
    for(int i=0; i<numUTs; i++){ 	//i=1,...,|I|
 	   for(int b=0; b<numBands; b++){	//b=0,...,|B|
@@ -111,15 +111,16 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
 		   l_expr += (delta + pigreco[i] + mu[b]);
 		   for(int j=0; j<numAPs; j++){
 			   IloNumArray rmin_ij = r_min[i][j];
-			   if(rmin_ij[b]>delta_0 && r_curr[i][j])
-				   r_expr += w[i] * ( 1/rmin_ij[b] - 1/r_curr[i][j] ) * x[i][j];
+			   if(rmin_ij[b]>delta_0)
+				   r_expr += w[i] * ( 1/rmin_ij[b] ) * x[i][j];
+			   if(r_curr[i][j]>delta_0)
+				   r_expr -= w[i] * ( 1/r_curr[i][j] ) * x[i][j];
 		   }
 		   mod.add(l_expr >= r_expr); //specified for each i and b
 		   l_expr.end();
 		   r_expr.end();
 	   }
    }
-
 }// END createMultibandAlgMILP
  
 

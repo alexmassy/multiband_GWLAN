@@ -1,8 +1,6 @@
 #!/bin/bash
 #
-# Recupera i dati delle simulazioni e produce un file CSV.
-# Attenzione ai "CR" (ovvero \r) nei file di output!
-# Lanciare due volte se la cartella contiene residui dei file tmp precedenti
+# Recupera i dati delle simulazioni e produce una tabella.
 
 NUM_PARAMS=8
 PARAM[1]="multib_power"
@@ -38,8 +36,6 @@ EXT="txt"
 
 # path to the simulation folder, default "."
 PTSF="."
-# number of instances, default 20
-NUM_INST=20
 # perform parsing and stat computation, default "yes"
 DO_PARSE="yes"
 DO_COMPUTE="yes"
@@ -81,6 +77,12 @@ done
 
 STAT_PATH="$PTSF/$SUMMARY_FILE"
 STAT_PATH_TMP="$STAT_PATH"".tmp"
+
+
+# check number of instances
+NUM_INST=(`ls $PTSF/1 -l | grep "d" | wc -l`)
+echo "Number of instances for each configuration is " $NUM_INST
+
 
 SCENARI=""
 LS=`ls -v $PTSF`
@@ -188,6 +190,31 @@ for m in ${models_to_parse[@]} ; do
 	let "c = c + 1"
 done
 
+
+#build feasibility counter
+cat > count_feas.awk << EOHD
+#! /bin/awk -f
+
+BEGIN{
+	#print "unf_rob	unf_nr"
+	unf_rob = 0
+	unf_nr = 0
+}
+
+{
+	if(\$8 == "UNFEASIBLE," || \$8 == "N/A,"){
+		unf_rob+=1
+	}
+	if(\$9 == "UNFEASIBLE," || \$9 == "N/A,"){
+		unf_nr+=1
+	}
+	if(\$2 == "$NUM_INST,"){
+		print \$1 " robust = " $NUM_INST-unf_rob " ; nominal = " $NUM_INST-unf_nr
+		unf_nr = 0
+		unf_rob = 0
+	}
+}
+EOHD
 
 #extract number of feasible solutions (added by Alessio Massidda) 
 `awk -f ./count_feas.awk $STAT_PATH > $PTSF/feasible_solutions.txt`
@@ -339,5 +366,4 @@ echo
 echo -e "Bye!\n"
 
 exit 0
-
 

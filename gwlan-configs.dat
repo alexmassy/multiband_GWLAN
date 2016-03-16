@@ -1,0 +1,154 @@
+### Green WLAN Configuration List ###
+
+Config # 1 :
+n_User = 13
+n_AP = 4
+field-size_X = 52.5
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 2 :
+n_User = 27
+n_AP = 4
+field-size_X = 52.5
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 3 :
+n_User = 40
+n_AP = 4
+field-size_X = 52.5
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 4 :
+n_User = 53
+n_AP = 4
+field-size_X = 52.5
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+
+Config # 5 :
+n_User = 50
+n_AP = 10
+field-size_X = 75
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 6 :
+n_User = 100
+n_AP = 10
+field-size_X = 75
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 7 :
+n_User = 150
+n_AP = 10
+field-size_X = 75
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+  
+Config # 8 :
+n_User = 60
+n_AP = 6
+field-size_X = 54
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 9 :
+n_User = 120
+n_AP = 6
+field-size_X = 54
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+
+Config # 10 :
+n_User = 180
+n_AP = 6
+field-size_X = 54
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+  
+Config # 11 :
+n_User = 80
+n_AP = 8
+field-size_X = 44.7
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 12 :
+n_User = 120
+n_AP = 8
+field-size_X = 44.7
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 13 :
+n_User = 17
+n_AP = 5
+field-size_X = 28
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+
+Config # 14 :
+n_User = 34
+n_AP = 5
+field-size_X = 28
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+ 
+Config # 15 :
+n_User = 25
+n_AP = 10
+field-size_X = 35.3
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+
+Config # 16 :
+n_User = 50
+n_AP = 10
+field-size_X = 35.3
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7
+
+Config # 17 :
+n_User = 3
+n_AP = 12
+field-size_X = 55
+variance_present_pos = 0.3
+variance_future_pos = 0.1
+quantile = 0.05
+sigma_rayleigh = 0.7

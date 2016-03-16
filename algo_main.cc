@@ -6,23 +6,6 @@
 ///Upper bound on the number of clock ticks that may be spent for solving a model.
 const clock_t tlimit = 7200;
 
-/// Reads a configuration file; finds robust, nominal and future-optimal solutions; computes statistics and saves the information in an output file.
-/**
- * Here is the detailed list of steps:
- * - Consistence of provided input arguments (input and output filenames plus the verbose flag) is checked;
- * - All necessary information is fetched from a configuration file, calling the readData() function;
- * - The robust model is created calling createRobAlgMILP(), then it is customized;
- * - The nominal model is created calling createAlgILP(), then it is customized;
- * - The nominal model, <b>given the future positions of UTs</b>,  is created calling again createAlgILP(), then it is customized;
- * - Nominal and robust models are solved using the solve() function of the IloCplex class;
- * - Nominal and robust solutions are checked if they are feasible in the future scenario (through checkFeasibility());
- * - If at least the robust solution is still feasible, the nominal model computed in the fifth step is solved;
- * - Power consumptions and computing times are computed for the nominal and the robust solution (in the present and in the future), calling computePowerConsumption() several times;
- * - Power consumption of the optimal-future solution is computed (calling again computePowerConsumption());
- * - Maximum power consumption is calculated;
- * - Information is saved to the output file through the printResults() function;
- * - Heap's space used for CPLEX data structures is deallocated.
-*/
 int main (int argc, char *argv[]) {
 
  if (argc!=4)

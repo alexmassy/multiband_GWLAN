@@ -19,21 +19,17 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
    for (int i = 0; i < numUTs; ++i) {
       x[i] = IloIntVarArray(env, numAPs, 0/*lb*/, 1/*ub*/); //constraint (40)
       for (int j = 0; j < numAPs; ++j) {
-         sprintf(varName, "x.%d.%d", (int) i, (int) j); 
+         sprintf(varName, "x.%d.%d", i+1, j+1); 
          x[i][j].setName(varName);
-         
-         /* HA SENSO? SE SI, LA CONDIZIONE E' CONGIUNTIVA O DISGIUNTIVA TRA BANDE? */
-         IloNumArray r_min_ij = r_min[i][j];
-         if(r_curr[i][j]<delta_0 || r_min_ij[0]<delta_0)
+         if(r_curr[i][j]<delta_0)
            x[i][j].setBounds(0,0);
       }
       mod.add(x[i]); //add the x array to the model
-   }                                 
-   
+   }            
    
    // Create variables y(j) for j in J 
    for (int j = 0; j < numAPs; ++j) {
-     sprintf(varName, "y.%d", (int) j); 
+     sprintf(varName, "y.%d", (int) j+1); 
      y[j].setName(varName);            
    }
    mod.add(y); // add the y array to the model 
@@ -142,7 +138,7 @@ createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
    for (i = 0; i < numUTs; ++i) {
       x[i] = IloIntVarArray(env, numAPs, 0, 1);
       for (j = 0; j < numAPs; ++j) {
-         sprintf(varName, "x.%d.%d", (int) i, (int) j); 
+         sprintf(varName, "x.%d.%d", (int) i+1, (int) j+1); 
          x[i][j].setName(varName);
          if(r[i][j]<delta_0)
            x[i][j].setBounds(0,0);
@@ -152,7 +148,7 @@ createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
  
    // Create variables y(j) for j in J 
    for (j = 0; j < numAPs; ++j) {
-     sprintf(varName, "y.%d", (int) j); 
+     sprintf(varName, "y.%d", (int) j+1); 
      y[j].setName(varName);            
    }
    mod.add(y);

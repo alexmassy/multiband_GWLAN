@@ -280,10 +280,13 @@ struct coord {
 	double y;
 };
 
-/// Generic user's coordinates.
+/// Generic user's coordinates in the present.
 /** @see coord
 */
 struct coord *user;
+
+///User's coordinates in the future
+struct coord *user_fut;
 
 /// Generic AP's coordinates. See definition of the type "coord".
 /** @see coord
@@ -293,6 +296,10 @@ struct coord *ap;
 ///Stores the distance between each UT and each AP
 /** For example dist[i][j] contains the distance between user i and AP j */
 double **dist;
+
+///Stores distances in the future
+double **dist_fut;
+
 /// path gain [dB]. It is NEVER SET TO SOME SPECIFIC VALUE (it has always the default value 0)
 /** Please recall that <i>path_gain[dB] = - path_loss[dB]</i> */
 double **alpha_dB;
@@ -770,13 +777,16 @@ void computeInstance(int mode /*!< formal parameter for deployMode */)
 
 	// allocate memory for data structures
 	user = new struct coord [nUsers] ();
+	user_fut = new struct coord[nUsers] ();
 	ap = new struct coord [nAPs] ();
 	dist = new double* [nUsers];
+	dist_fut = new double* [nUsers];
 	alpha_dB = new double* [nUsers];
 	r = new double* [nUsers];
 	//allocating the second dimension for the 2-dimension arrays dist , alpha_dB and r
 	for(i=0; i < nUsers; i++) {
 		dist[i] = new double [nAPs] ();
+		dist_fut[i] = new double [nAPs] ();
 		alpha_dB[i] = new double [nAPs] ();
 		r[i] = new double [nAPs] ();
 	}
@@ -801,7 +811,7 @@ void computeInstance(int mode /*!< formal parameter for deployMode */)
 	for(j=0; j < nAPs; j++) {
 		closest[j]=0;
 		for(i=0; i < nUsers; i++) {
-            dist[i][j] = sqrt( pow(user[i].x - ap[j].x, 2) + pow(user[i].y - ap[j].y, 2) );
+            dist_fut[i][j] = dist[i][j] = sqrt( pow(user[i].x - ap[j].x, 2) + pow(user[i].y - ap[j].y, 2) );
             //looking for the closest user to AP j
 			if ( dist[i][j] < dist[closest[j]][j] )
 				closest[j] = i;
@@ -1224,14 +1234,14 @@ void createFile()
 
 	fu<<"param: CANDIDATE_SITES: b := ";
 	for(j=0; j < nAPs; j++) {
-		fu<<"\n\t"<<"CS"<<j<<"\t"<<P0[apclass[j-1]]*norm_factor[j];
+		fu<<"\n\t"<<"CS"<<j+1<<"\t"<<P0[apclass[j-1]]*norm_factor[j];
 	}
 	fu<<" ;\n\n";
 
 
 	fu<<"param p_w :=";
 	for(j=0; j < nAPs; j++) {
-		fu<<"\n\t"<<"CS"<<j<<"\t"<<
+		fu<<"\n\t"<<"CS"<<j+1<<"\t"<<
         (eta[apclass[j]][0] * Pt[0] * dlFraction + P_demod[apclass[j]] * (1-dlFraction)) * norm_factor[j];
   }
 	fu<<" ;\n\n";
@@ -1301,14 +1311,15 @@ void createFile()
 		fu<<"\n\t"<<"UT"<<i+1;
 		//checking whether this user is static 
 		if(mapping[i]==0){
+			user_fut[i] = user[i];
 			for(int j=0;j<nAPs;j++) fu<<"\t"<<computeAppRate(computePL_rayleigh(dist[i][j]));
 		}
 		//depending on the band, choose the proper candidate position
 		else{
-			struct coord fut_pos = computeFuturePosition(CandidatePositions[i][mapping[i]-1]);
+			user_fut[i] = computeFuturePosition(CandidatePositions[i][mapping[i]-1]);
 			for(int j=0;j<nAPs;j++){
-				double fut_dist = sqrt(pow(ap[j].x-fut_pos.x,2) + pow(ap[j].y-fut_pos.y,2));
-				fu<<"\t"<< computeAppRate(computePL_rayleigh(fut_dist));
+				dist_fut[i][j] = sqrt(pow(ap[j].x-user_fut[i].x,2) + pow(ap[j].y-user_fut[i].y,2));
+				fu<<"\t"<< computeAppRate(computePL_rayleigh(dist_fut[i][j]));
 			}
 		}
     }
@@ -1334,7 +1345,7 @@ void saveExtraInfo()
 	}
 	fc << "Field size = "<<fieldSizeX<<" x "<<fieldSizeY<<"\n\n";
 
-	fc << "*** Coordinates of the users ***\n\n";
+	fc << "*** Coordinates of the users at t0 ***\n\n";
 	for(i=0; i < nUsers; i++) {
 		//fc<<"user["<<i+1<<"]: x="<<user[i].x<<", y="<<user[i].y<<"\n";
 		fc<<"user["<<i+1<<"]: "<<user[i].x<<" "<<user[i].y<<"\n"; //GN
@@ -1348,10 +1359,10 @@ void saveExtraInfo()
 	}
 	fc << "\n\n";
 
-	fc << "*** Distances user-AP ***\n\n";
-	for(j=0; j < nAPs; j++) {
-		for(i=0; i < nUsers; i++) {
-			fc<<"ap["<<j+1<<"]-user["<<i+1<<"] = "<<dist[i][j]<<"\n";
+	fc << "*** Distances user-AP at t0***\n\n";
+	for(i=0; i < nUsers; i++) {
+		for(j=0; j < nAPs; j++) {
+			fc<<"user["<<i+1<<"]-ap["<<j+1<<"] = "<<dist[i][j]<<"\n";
 		}
 	}
 	fc << "\n\n";
@@ -1361,6 +1372,21 @@ void saveExtraInfo()
 		fc<<"user["<<i+1<<"] --> band "<<mapping[i]<<"\n";
 	}
 	fc<<"\n\n";
+	
+	fc << "*** Coordinates of the users at t0 + delta_t ***\n\n";
+	for(i=0; i<nUsers; i++){
+		fc<<"user["<<i+1<<"]: "<<user_fut[i].x<<" "<<user_fut[i].y<<"\n";
+	}
+	fc<<"\n\n";
+	
+	fc << "*** Distances user-AP at t0 + delta_t ***\n\n";
+		for(i=0; i < nUsers; i++) {
+			for(j=0; j < nAPs; j++) {
+				fc<<"user["<<i+1<<"]-ap["<<j+1<<"] = "<<dist_fut[i][j]<<"\n";
+			}
+		}
+		fc << "\n\n";
+
 	
 	fc<<"Maximum radius of the greatest band = "<<maxPercMov*fieldSizeX<<" m";
 	

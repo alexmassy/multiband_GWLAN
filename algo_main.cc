@@ -44,6 +44,7 @@ int main (int argc, char *argv[]) {
 
   IloInt K;
   IloNumArray H(simEnv);
+  IloNumArray L(simEnv);
   IloNum rho;
   vector<string> cs_vect;
   vector<string> ut_vect;
@@ -56,7 +57,7 @@ int main (int argc, char *argv[]) {
 
   //cout<<"Reading input.\n";
   
-  readData(simEnv, input_filename, K, H, rho, cs_vect, ut_vect, w, b, p_w, r_curr, r_min, r_future);
+  readData(simEnv, input_filename, K, H, L, rho, cs_vect, ut_vect, w, b, p_w, r_curr, r_min, r_future);
 
   /********** Algorithm ***********/
 
@@ -64,22 +65,6 @@ int main (int argc, char *argv[]) {
   IloInt numAPs = cs_vect.size();
   IloInt numUTs = ut_vect.size();
   IloInt numBands = H.getSize();  
-  
-  /*for(int i=0;i<numBands;i++)
-	  cout<<"H["<<i<<"] = "<<H[i]<<endl;
-  cout<<"\n\n";
-  for(int i=0; i<numUTs; i++){
-	  cout<<"UT"<<i+1<<"-";
-	  IloArray<IloNumArray> pippo = r_min[i];
-	  for(int j=0; j<numAPs; j++){
-		  cout<<"AP"<<j+1<<"=[";
-		  IloNumArray pluto = pippo[j];
-		  for(int k=0; k<numBands; k++)
-			  cout<<pluto[k]<<",";
-		  cout<<"]\n";
-	  }
-	  cout<<"\n\n";
-  }*/
   
   try {
  
@@ -90,7 +75,7 @@ int main (int argc, char *argv[]) {
     assignVarMx x(multibAlgEnv, numUTs);//no bouds specified
     IloIntVarArray y(multibAlgEnv, numAPs, 0, 1); //bounds already set (constraint 41) 
 
-    createMultibMILP(multibAlgMod, x, y, b, p_w, rho, w, r_curr, r_min, K, H);
+    createMultibMILP(multibAlgMod, x, y, b, p_w, rho, w, r_curr, r_min, K, H, L);
  
     IloCplex multibAlgCplex(multibAlgMod);
     

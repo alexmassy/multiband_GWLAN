@@ -34,7 +34,7 @@ typedef IloArray<IloArray<IloNumArray> > IloNumArray3D;
 /// <b>Initializes CPLEX data structures for the Multiband mathematical model.</b>
 void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
                      IloNumArray  p_w, IloNum rho, IloNumArray w, IloNumArray2D r_curr, 
-					 IloNumArray3D r_min, IloInt K, IloNumArray H);
+		     IloNumArray3D r_min, IloInt K, IloNumArray H, IloNumArray L);
 
 
 
@@ -57,7 +57,7 @@ void createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
  *Notable information fetched from the instance is: H[b]; K; traffic demand <i>w</i>; base power consuption <i>b</i>; 
  *"airtime" power consumption<i>p_w</i>; current, future, minimum and minimum-deviation rates.
  */
-void readData(IloEnv env, string input_filename, IloInt& K, IloNumArray H, IloNum& rho, 
+void readData(IloEnv env, string input_filename, IloInt& K, IloNumArray H, IloNumArray L, IloNum& rho, 
               vector<string>& cs_vect, vector<string>& ut_vect, IloNumArray w, 
               IloNumArray b, IloNumArray p_w, IloNumArray2D r_curr, 
               IloNumArray3D r_min, IloNumArray2D r_future);

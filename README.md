@@ -2,7 +2,7 @@
 
 Ciao!
 
-Questa repository contiene la mia versione del simulatore per multiband GWLAN, rispetto al draft del 4 febbraio. 
+Questa repository contiene la mia versione del simulatore per multiband GWLAN, rispetto al draft del 19 marzo. 
 
 Il tool viene eseguito chiamando lo script 'launcher.sh' , che per ogni istanza di ogni configurazione (queste ultime si possono consultare in 'gwlan-configs.dat') invoca "instance_maker.cc". 
 Il generatore di istanze genera un file, il quale viene letto da "algo_main.cc" , che inizializza e chiama le procedure del solver (definite in "gwlan_lib.cc") per tale istanza, per poi salvare le soluzioni in un apposito file.

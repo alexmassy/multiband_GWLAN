@@ -251,8 +251,8 @@ int seed = 0;
 int Nbands;
 ///When a user moves, he has an upper bound in the number of meters: it is computed as 'maxPercMov' percentage of fieldSizeX
 float maxPercMov;
-///Mapping UT-band, valid for computing future rates
-vector<int> mapping;
+///mapping[i] contains a list of users belonging to band i (0 included) in the future
+int ** mapping;
 
 ///Generator of random numbers, properly initialized in the main function
 default_random_engine generator;
@@ -260,7 +260,7 @@ default_random_engine generator;
 /// Maximum speed of the users who move [m/s]
 double s_max = 1;
 /// Delta T (it depends on the configuration taken into account)
-//double delta_t = 1;
+double delta_t = 1;
 /// Variance of the current position (it depends on the configuration taken into account)
 double varianceCurrent = 0.2;
 /// Variance of the future position (it depends on the configuration taken into account)
@@ -1063,26 +1063,23 @@ struct coord ** computeCandidatePositions(struct coord current_pos /*!< current 
 * Of course they are choosen randomly according to upper bounds H[b] for b=0,1,...,|B|
 * @see H
 */
-vector<int> assignBandstoUTs(){
-	
-	int * available_places = new int[Nbands+1]();
-	for(int i=0;i<=Nbands;i++){
-		available_places[i] = H[i];
-	}
-	
+int ** assignBandstoUTs(){
+
 	vector<int> user_set;
-	for(int i=0;i<nUsers;i++){
-		bool bandOk = false;
-		int selected_band=-1;	
-		do{
-			selected_band = abs(rand() + seed)%(Nbands+1);
-			if(available_places[selected_band]>0) bandOk = true;
-		}while(!bandOk);
-		
-		available_places[selected_band]-=1;
-		user_set.push_back(selected_band);
+	for(int i=0; i<nUsers; i++)
+	    user_set.push_back(i); 
+	
+	int ** mappings = new int * [Nbands+1]();
+	for(int i=0;i<=Nbands;i++){
+		mappings[i] = new int [H[i]]();
+		for(int j=0; j<H[i]; j++){
+			int selected_user = rand() % user_set.size();
+			mappings[i][j] = user_set[selected_user];
+			//cout<<" user "<<mappings[i][j]<<" got band "<<i<<endl;
+			user_set.erase(user_set.begin()+selected_user);
+		}
 	}
-	return user_set;
+	return mappings;
 }
 
 
@@ -1310,18 +1307,32 @@ void createFile()
 	for(i=0; i < nUsers; i++) {
 		fu<<"\n\t"<<"UT"<<i+1;
 		//checking whether this user is static 
-		if(mapping[i]==0){
-			user_fut[i] = user[i];
-			for(int j=0;j<nAPs;j++) fu<<"\t"<<computeAppRate(computePL_rayleigh(dist[i][j]));
+		bool static_user=false;
+		for(int k=0; k<H[0]; k++) {
+		      if(mapping[0][k] == i){
+		        static_user=true;
+		        break;
+		      }
 		}
-		//depending on the band, choose the proper candidate position
-		else{
-			user_fut[i] = computeFuturePosition(CandidatePositions[i][mapping[i]-1]);
-			for(int j=0;j<nAPs;j++){
-				dist_fut[i][j] = sqrt(pow(ap[j].x-user_fut[i].x,2) + pow(ap[j].y-user_fut[i].y,2));
-				fu<<"\t"<< computeAppRate(computePL_rayleigh(dist_fut[i][j]));
-			}
-		}
+	    if(static_user) {
+	      for(j=0; j < nAPs; j++) {
+	    	  	user_fut[i] = user[i];
+			  	fu<<"\t"<< computeAppRate(computePL_rayleigh(dist[i][j])); 
+			  } 
+	    }
+	    else{
+	    	for(int b=1; b<=Nbands; b++){
+	    		for(int k=0; k<H[b]; k++){
+	    			if(mapping[b][k] == i){
+	    				user_fut[i] = computeFuturePosition(CandidatePositions[i][b-1]);
+	    				for(int j=0;j<nAPs;j++){
+	    					dist_fut[i][j] = sqrt(pow(ap[j].x-user_fut[i].x,2) + pow(ap[j].y-user_fut[i].y,2));
+	    					fu<<"\t"<< computeAppRate(computePL_rayleigh(dist_fut[i][j]));
+	    				}
+	    			}
+	    		}
+	    	}
+	    }
     }
 	fu<<" ;\n\n";
 	
@@ -1367,11 +1378,15 @@ void saveExtraInfo()
 	}
 	fc << "\n\n";
 
-	fc <<"*** Mapping users-bands ***\n\n";
-	for(int i=0;i<nUsers;i++){
-		fc<<"user["<<i+1<<"] --> band "<<mapping[i]<<"\n";
+	fc <<"*** Mapping bands-users ***\n\n";
+	for(int i=0;i<=Nbands;i++){
+		fc<<"band "<<i<<" has users: [ ";
+		for(int j=0; j<H[i]; j++)
+			fc<<(mapping[i][j])+1<<" ";
+		fc<<"]\n";
 	}
 	fc<<"\n\n";
+	
 	
 	fc << "*** Coordinates of the users at t0 + delta_t ***\n\n";
 	for(i=0; i<nUsers; i++){

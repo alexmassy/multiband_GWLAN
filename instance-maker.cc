@@ -42,6 +42,12 @@ using namespace std;
 ///Number of candidate positions
 #define N_pos 3
 
+
+//this is to avoid using magic numbers in function "generateSpeedList()"
+#define BAND1 0
+#define BAND2 1
+#define BAND3 2
+
 ///Maximum goodput per AP  [kbps]
 const unsigned max_goodput = 18000;
 
@@ -249,8 +255,8 @@ int seed = 0;
 
 ///Number of bands for user mobility in Multiband GWLAN
 int Nbands;
-///When a user moves, he has an upper bound in the number of meters: it is computed as 'maxPercMov' percentage of fieldSizeX
-float maxPercMov;
+///Max speed of movement for the greatest band
+float maxSpeedMov;
 ///mapping[i] contains a list of users belonging to band i (0 included) in the future
 int ** mapping;
 
@@ -391,7 +397,7 @@ void readInput()
 		}
 		
 		config.readInto(Nbands, "n_of_bands");
-		config.readInto(maxPercMov, "max_perc_mov");
+		config.readInto(maxSpeedMov, "max_speed_mov");
 		config.readInto(Pmax, "PT_max");
 		config.readInto(Pmin, "PT_min");
 		config.readInto(nPwrLevels, "n_Pwr-Level");
@@ -1014,24 +1020,24 @@ struct coord bivariateNormal(struct coord mean_pos/*!< position of the user <i>i
 * For the current coordinates of a user, Nbands*N_pos candidate positions are generated as a whole. 
 */
 struct coord ** computeCandidatePositions(struct coord current_pos /*!< current position of the UT */ , 
-										double * rho /*!< array of radiuses for multiband model */)
+										double * rho /*!< array of speeds for multiband model */)
 {
   struct coord ** candidate_pos;
   candidate_pos = new struct coord * [Nbands] ();
   struct coord reference_pos;
   
   for(int j=0; j<Nbands; j++){
-	  double radius;
+	  double speed;
 	  candidate_pos[j] = new struct coord [N_pos]();
 	  
 	  if (j==0) 
-		  radius = (double) rand()/RAND_MAX * rho[0]; 
+		  speed = (double) rand()/RAND_MAX * rho[0]; 
 	  else 
-		  radius = (double) rand()/RAND_MAX * rho[0] + rho[j-1];
+		  speed = (double) rand()/RAND_MAX * rho[0] + rho[j-1];
 	  
 	  double direction = (double) rand()/RAND_MAX * (2*PI);
-	  reference_pos.x = radius * cos(direction);
-	  reference_pos.y = radius * sin(direction);
+	  reference_pos.x = speed * delta_t * cos(direction);
+	  reference_pos.y = speed * delta_t * sin(direction);
 	  
 	  for(int k=0;k<N_pos;k++){
 		 bool radiusOk = false;
@@ -1044,8 +1050,8 @@ struct coord ** computeCandidatePositions(struct coord current_pos /*!< current 
 		 	//take another direction , since this one isn't good
 		 	if(!radiusOk){
 		 		direction = (double) rand()/RAND_MAX * (2*PI);
-		 		reference_pos.x = radius * cos(direction);
-		 		reference_pos.y = radius * sin(direction);
+		 		reference_pos.x = speed * delta_t * cos(direction);
+		 		reference_pos.y = speed * delta_t * sin(direction);
 		 	}
 		 	//the candidate position generated is compatible with the simulation area :)
 		 	else 
@@ -1187,15 +1193,15 @@ void createFile()
         norm_factor[j] = (P0[apclass[j]] + eta[apclass[j]][0] * Pt[0] + mu[apclass[j]] * 3.750) / (eta[apclass[j]][0] * Pt[0]);
     }
     
-    //computing different radiuses for the multiband model (rho[1] , rho[2] , ... )
+    //computing different speeds for the multiband model (rho[1] , rho[2] , ... )
     rho = new double [Nbands] ();
-	double radiusFrac = (maxPercMov*fieldSizeX)/Nbands;
-    for(int i=0;i<Nbands;i++){
-    	rho[i] = radiusFrac * (i+1);
+    float speed_fraction = (double) maxSpeedMov/(Nbands);
+	for(int i=0;i<Nbands;i++){
+    	rho[i] = (double) speed_fraction*(i+1);
     }
 
     //computing cardinalities of bands (H[0] contains 'x' users , H[1] contains 'y' users , . . . )
-    H[0]=ceil(0.5*nUsers); 
+    H[0]=ceil(0.8*nUsers); 
     int remaining_users = nUsers - H[0];
     normal_distribution<float> frac_distr(50,35);//average value=50 , variance=35
     //number of users in each band is completely random
@@ -1275,16 +1281,16 @@ void createFile()
     		CandidatePositions[i] = computeCandidatePositions(user[i], rho);
     
 
-
+    
     //This is computed assuming all UT move!!!
     fu<<"# (Application-level) Data rate values r_min-b[i][j] are now in kb/s"<<"\n";
 	fu<<"param r_min-b :=";
 	for(i=0; i < nUsers; i++) {
 		fu<<"\n\t"<<"UT"<<i+1;
 		for(j=0; j < nAPs; j++) {
-			//r(b=0,f1)[i][j]
-			fu<<"\n\t\tCS"<<j+1<<" [ "<<computeAppRate(computePL_rayleighMIN(dist[i][j]))<<" ";
-			for(int b=0;b<Nbands;b++){
+			// this is equivent to the r_min of the simple robust solution (INOC) 
+			fu<<"\n\t\tCS"<<j+1<<" [ "<<computeAppRate(computePL_rayleighMIN(dist[i][j]))<<" ";//no movement => band=0
+			for(int b=0;b<Nbands;b++){//movement => band>0
 				//r(b>0,f1)[i][j]
 				fu<<computeDevminRate(CandidatePositions[i], b, j);
 				fu<<" ";
@@ -1329,8 +1335,11 @@ void createFile()
 	    					dist_fut[i][j] = sqrt(pow(ap[j].x-user_fut[i].x,2) + pow(ap[j].y-user_fut[i].y,2));
 	    					fu<<"\t"<< computeAppRate(computePL_rayleigh(dist_fut[i][j]));
 	    				}
+	    				//break;
 	    			}
+	    			if(user_fut[i].x != 0 || user_fut[i].y != 0) break;//if the moving user i have been processed, go on with the next
 	    		}
+    			if(user_fut[i].x != 0 || user_fut[i].y != 0) break;//if the moving user i have been processed, go on with the next
 	    	}
 	    }
     }
@@ -1403,11 +1412,141 @@ void saveExtraInfo()
 		fc << "\n\n";
 
 	
-	fc<<"Maximum radius of the greatest band = "<<maxPercMov*fieldSizeX<<" m";
+	fc<<"Maximum speed of the greatest band = "<<maxSpeedMov<<" m/s";
 	
 	fc.close();
 }
 
+/*
+void generateSpeedList(){
+	
+	int i,j,tmp;
+		double pwrStep;
+		double p,p0,p1;
+		double * rho; //will contain upper radius for each band b (rho[0] would be the max radius of the lowest mob. band)
+		double maxavgload;
+		char *s, *t;
+		
+	    //Initializing some variables depending on the chosen power step mode
+	    switch (psm) {
+
+	        //parsing transmission power tabulation and storing in Pt
+	        case 0:{
+	            //transform a C++ string in a C string(array of characters)
+	            s = (char*)PT_tab.c_str();
+	            //create tokens for substrings separated by comma (remember that tabulation are something like "x,y,z,...")
+	            t = strtok(s, ",");
+	            i=1;
+	            Pt = new double [nPwrLevels] ();
+	            if(debug) cout<<"power tabulation is: ";
+
+	            while (t && i<=nPwrLevels) {
+	                Pt[i-1] = atof(t);
+	                if(debug) cout<<Pt[i-1]<<" ";
+	                i++;
+	                t = strtok(NULL, ",");
+	            }
+	            if(i <= nPwrLevels) {
+	                cout << "Errore: numero di valori PT_tab inferiore al numero di livelli richiesto!\n";
+	                exit(2);
+	            }
+	            if(debug) cout<<endl;
+	            break;
+			}
+			default: {
+				cout << "Power step mode not allowed (psm="<<psm<<")! Implementation not yet provided for values different from 0.\n";
+				exit(99);
+	        }
+	    }
+	
+	fstream fk;
+	const char* fkName = "speeds_present.dat";
+	fk.open(fkName, ios::out);
+	if(fk.fail()){
+		cout << "Errore nella creazione del file "<< fkName <<"!\n";
+		return;
+	}
+	
+	for(int i=0; i<nUsers; i++){
+		for(int j=0; j<nAPs; j++){
+			fk<<i+1<<", "<<j+1<<", "<<computeAppRate(computePL_rayleighAVG(dist[i][j]))<<"\n";
+		}
+	}
+	fk.close();
+	
+	
+	//computing different speeds for the multiband model (rho[1] , rho[2] , ... )
+	rho = new double [Nbands] ();
+	float speed_fraction = (double) maxSpeedMov/(Nbands);
+	for(int i=0;i<Nbands;i++){
+		rho[i] = (double) speed_fraction*(i+1);
+	}
+	
+ 	//BAND 1 
+	fstream fc1;
+	const char* fcName1 = "speeds_band1.dat";		
+	fc1.open(fcName1, ios::out);
+	if(fc1.fail()){
+		cout << "Errore nella creazione del file "<< fcName1 <<"!\n";
+		return;
+	}
+	//generating all the rates for each user
+	for(int i=0; i < nUsers; i++){ 
+		for(int j=0;j<nAPs; j++){
+			struct coord ** CandidatePositions = computeCandidatePositions(user[i], rho);
+			for(int k=0; k<N_pos; k++){
+				double distance = sqrt(pow(ap[j].x - CandidatePositions[BAND1][k].x,2) + pow(ap[j].y - CandidatePositions[BAND1][k].y,2));
+				fc1<<i+1<<", "<<j+1<<", "<<computeAppRate(computePL_rayleighAVG(distance))<<"\n";
+			}
+			
+		}
+	}
+	fc1.close();
+	
+	//BAND 2 
+	fstream fc2;
+	const char* fcName2 = "speeds_band2.dat";		
+	fc2.open(fcName2, ios::out);
+	if(fc2.fail()){
+		cout << "Errore nella creazione del file "<< fcName2 <<"!\n";
+		return;
+	}
+	//generating all the rates for each user
+	for(int i=0; i < nUsers; i++){ 
+		for(int j=0;j<nAPs; j++){
+			struct coord ** CandidatePositions = computeCandidatePositions(user[i], rho);
+			for(int k=0; k<N_pos; k++){
+				double distance = sqrt(pow(ap[j].x - CandidatePositions[BAND2][k].x,2) + pow(ap[j].y - CandidatePositions[BAND2][k].y,2));
+				fc2<<i+1<<", "<<j+1<<", "<<computeAppRate(computePL_rayleighAVG(distance))<<"\n";
+			}
+			
+		}
+	}
+	fc2.close();
+		
+	//BAND 3
+	fstream fc3;
+	const char* fcName3 = "speeds_band3.dat";		
+	fc3.open(fcName3, ios::out);
+	if(fc3.fail()){
+		cout << "Errore nella creazione del file "<< fcName3 <<"!\n";
+		return;
+	}
+	//generating all the rates for each user
+	for(int i=0; i < nUsers; i++){ 
+		for(int j=0;j<nAPs; j++){
+			struct coord ** CandidatePositions = computeCandidatePositions(user[i], rho);
+			for(int k=0; k<N_pos; k++){
+				double distance = sqrt(pow(ap[j].x - CandidatePositions[BAND3][k].x,2) + pow(ap[j].y - CandidatePositions[BAND3][k].y,2));
+				fc3<<i+1<<", "<<j+1<<", "<<computeAppRate(computePL_rayleighAVG(distance))<<"\n";
+			}
+			
+		}
+	}
+	fc3.close();
+	
+}
+*/
 
 ///Generates the random seed, parses configuration data, checks if the configuration is consistent, generates a scenario and saves the instance.
 /**
@@ -1481,6 +1620,6 @@ int main(int argc, char** argv)
 
 	saveExtraInfo();
 
-	//cout << "**********************Istanza creata con successo!***********************\n";
+	cout << "**********************Istanza creata con successo!***********************\n";
 	return 0;
 }

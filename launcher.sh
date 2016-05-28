@@ -8,11 +8,11 @@ ALL_CFG_FILE="gwlan-configs.dat" #esistente
 INSTANCE_INI_FILE="gwlan-input.ini"
 INSTANCE_SKEL_FILE="gwlan-input.ini.skel" #esistente
 RES_PATH="./configurations"
-NUM_INST="20"
+NUM_INST="4"
 #TIMEOUT="3600"
 #REL_MIPGAP="1e-2"
 
-#CONFIGS_TO_RUN="1 2 3 4 5 6 7 8 9 14 15 16 17 18"
+CONFIGS_TO_RUN="1 2 3 4"
 
 # $1 = skeleton file (input)
 # $2 = ini file (output)
@@ -92,6 +92,7 @@ for i in ${cfgnr[@]} ; do
 		# save input & output files
 		mkdir -p $RES_PATH/$i/$count/
 		mv gwlan-input.dat $RES_PATH/$i/$count/
+
 		mv extra.dat $RES_PATH/$i/$count/
 		mv *.out $RES_PATH/$i/$count/
    
@@ -105,6 +106,6 @@ done
 cp $ALL_CFG_FILE $RES_PATH/
 
 #compute statistic automatically
-cd scripts/
-./fetch_statistics.sh -p ../configurations/
-cd ..
+#cd scripts/
+#./fetch_statistics.sh -p ../configurations/
+#cd ..

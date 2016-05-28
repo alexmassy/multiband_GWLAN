@@ -165,9 +165,8 @@ max_speed = 1.0
 #sigma_rayleigh = 0.7
 
 
-#number of bands used for the movements in multiband model
+#number of bands used for the movements in multiband model (not included here the 0th)
 n_of_bands = 3
 
-#max radius of movement will be computed as a percentage of field_size_X
-#NOTE: here use float values (e.g. if you mean 15%, instead of typing '15', type '0.15')
-max_perc_mov = 0.15
+#in the following the maximum speed of movement for the greatest band (m/s)
+max_speed_mov = 1

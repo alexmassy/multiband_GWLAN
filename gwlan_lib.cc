@@ -1,23 +1,20 @@
 #include "gwlan_lib.hpp"
 
-/*
-* MULTIBAND model
-*/
+
 void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
                      IloNumArray  p_w, IloNum rho, IloNumArray w, IloNumArray2D r_curr, 
-		     IloNumArray3D r_min, IloInt K, IloNumArray H, IloNumArray L)
+					 IloNumArray3D r_min, IloInt K, IloNumArray H)
 {
   
-   //IloInt i, j;
    IloEnv env = mod.getEnv();// copies the optimization environment of "mod" in "env"
    IloInt numUTs = x.getSize();
    IloInt numAPs = y.getSize();
    IloInt numBands = H.getSize();
- 
+   
    // Create variables x(i,j) forall i in I, j in J
    char varName[100];                         
    for (int i = 0; i < numUTs; ++i) {
-      x[i] = IloIntVarArray(env, numAPs, 0/*lb*/, 1/*ub*/); //constraint (59)
+      x[i] = IloIntVarArray(env, numAPs, 0/*lb*/, 1/*ub*/); //constraint (40)
       for (int j = 0; j < numAPs; ++j) {
          sprintf(varName, "x.%d.%d", i+1, j+1); 
          x[i][j].setName(varName);
@@ -25,44 +22,9 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
            x[i][j].setBounds(0,0);
       }
       mod.add(x[i]); //add the x array to the model
-   }            
+   }                                 
    
-   // Create variables y(j) for j in J 
-   for (int j = 0; j < numAPs; ++j) {
-     sprintf(varName, "y.%d", (int) j+1); 
-     y[j].setName(varName);            
-   }
-   mod.add(y); // add the y array to the model 
-   
-   
-   // Create variables pigreco(i) for i in |I| 
-  IloNumVarArray pigreco(env, numUTs, 0, IloInfinity); //(constraint 56)
-   for (int i = 0; i < numUTs; i++) {
-     sprintf(varName, "pigreco.%d", (int) i); 
-     pigreco[i].setName(varName);
-   }
-   mod.add(pigreco);
- 
-   // Create variables mu(b) and lambda(b) for b in |B|  
-   IloNumVarArray mu(env, numBands, 0, IloInfinity); //(constraint 57)
-   IloNumVarArray lambda(env, numBands, 0, IloInfinity);//(constraint 57)
-   for (int b = 0; b < numBands; ++b) {
-     sprintf(varName, "mu.%d", (int) b); 
-     mu[b].setName(varName);
-     sprintf(varName, "lambda.%d", (int) b); 
-     lambda[b].setname(varName);
-   }
-   mod.add(mu);
-   mod.add(lambda);
-   
-   
-   //create variable delta
-   IloNumVar delta(env);// constraint 58
-   delta.setBounds(0,IloInfinity);
-   delta.setName("delta");
-   mod.add(delta);
-   
-   
+    
    // Create objective function: 
    // minimize sum(j in J) b(j) * y(j) + p_w(j) * (sum(i in I) w(i) / r_curr(i,j) * x(i,j))
    IloExpr obj(env);
@@ -77,7 +39,39 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
    obj.end();//frees resources allocated to such variable
  
    
-   // Add the UT assignament constraints: #53
+   // Create variables y(j) for j in J 
+      for (int j = 0; j < numAPs; ++j) {
+        sprintf(varName, "y.%d", j+1); 
+        y[j].setName(varName);            
+      }
+      mod.add(y); // add the y array to the model 
+      
+
+   // Create variables pigreco(i) for i in |I| 
+  IloNumVarArray pigreco(env, numUTs, 0, IloInfinity); //(constraint 37)
+   for (int i = 0; i < numUTs; i++) {
+     sprintf(varName, "pigreco.%d", i+1); 
+     pigreco[i].setName(varName);
+   }
+   mod.add(pigreco);
+ 
+   // Create variables mu(b) for b in |B|  
+   IloNumVarArray mu(env, numBands, 0, IloInfinity); //(constraint 38)
+   for (int b = 0; b < numBands; ++b) {
+     sprintf(varName, "mu.%d", b); 
+     mu[b].setName(varName);
+   }
+   mod.add(mu);
+   
+   
+   //create variable delta
+   IloNumVar delta(env);// constraint 39
+   delta.setBounds(0,IloInfinity);
+   delta.setName("delta");
+   mod.add(delta);
+   
+   
+   // Add the UT assignament constraints: #34
    // forall i in I: sum(j in J) x(i,j) = 1
    for (int i = 0; i < numUTs; ++i) {
      IloExpr expr(env);
@@ -89,30 +83,27 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
    }
  
    
-   // Add multiband constraints: #54
+   // Add multiband constraints: #35
    for(int j=0; j<numAPs; j++){
 	   IloExpr expr(env); 
-	   expr += K * delta; 
+	   expr += ( K * delta ); 
 	   for(int i=0; i<numUTs; i++)
-		   if(r_curr[i][j]>delta_0){
-			   expr += (w[i] * (x[i][j] / r_curr[i][j]));
-		   }
-		   expr += pigreco[i];
-	   for(int b=0; b<numBands; b++){
+		   if(r_curr[i][j]>delta_0)
+			   expr += (w[i] * (x[i][j] / r_curr[i][j])) + pigreco[i];
+	   for(int b=0; b<numBands; b++)
 		   expr += (mu[b] * H[b]);
-		   expr -= (lambda[b] * L[b]);
-	   }
+	   
 	   mod.add(expr <= rho * y[j]);
 	   expr.end();
    }
  
-  
-   // constraint #55
+   
+   // constraint #36
    for(int i=0; i<numUTs; i++){ 	//i=1,...,|I|
 	   for(int b=0; b<numBands; b++){	//b=0,...,|B|
 		   IloExpr l_expr(env);
 		   IloExpr r_expr(env);
-		   l_expr += (delta + pigreco[i] + mu[b] - lambda[b]);
+		   l_expr += (delta + pigreco[i] + mu[b]);
 		   for(int j=0; j<numAPs; j++){
 			   IloNumArray rmin_ij = r_min[i][j];
 			   if(rmin_ij[b]>delta_0)
@@ -128,9 +119,6 @@ void createMultibMILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray
 }// END createMultibandAlgMILP
  
 
-/*
-* NOMINAL model
-*/
 void
 createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
              IloNumArray p_w, IloNum rho, IloNumArray w, IloNumArray2D r)
@@ -146,7 +134,7 @@ createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
    for (i = 0; i < numUTs; ++i) {
       x[i] = IloIntVarArray(env, numAPs, 0, 1);
       for (j = 0; j < numAPs; ++j) {
-         sprintf(varName, "x.%d.%d", (int) i+1, (int) j+1); 
+         sprintf(varName, "x.%d.%d", (int)i+1, (int)j+1); 
          x[i][j].setName(varName);
          if(r[i][j]<delta_0)
            x[i][j].setBounds(0,0);
@@ -156,7 +144,7 @@ createAlgILP(IloModel mod, assignVarMx x, IloIntVarArray y, IloNumArray b,
  
    // Create variables y(j) for j in J 
    for (j = 0; j < numAPs; ++j) {
-     sprintf(varName, "y.%d", (int) j+1); 
+     sprintf(varName, "y.%d", (int)j+1); 
      y[j].setName(varName);            
    }
    mod.add(y);
@@ -338,7 +326,7 @@ printResults(string output_filename, IloNum multib_PowCons, IloNum nr_PowCons,
 
 
 
-void readData(IloEnv env, string input_filename, IloInt& K, IloNumArray H, IloNumArray L, IloNum& rho, 
+void readData(IloEnv env, string input_filename, IloInt& K, IloNumArray H, IloNum& rho, 
               vector<string>& cs_vect, vector<string>& ut_vect, IloNumArray w, 
               IloNumArray b, IloNumArray p_w, IloNumArray2D r_curr, 
               IloNumArray3D r_min, IloNumArray2D r_future)
@@ -522,20 +510,6 @@ void readData(IloEnv env, string input_filename, IloInt& K, IloNumArray H, IloNu
      infile >> temp >> cardinality;
      if(temp!=";")
        H.add(cardinality);
-  }while(temp!=";");
-  infile.close();
-  
-  // Read L[b]
-  infile.open (input_filename.c_str(), ifstream::in);
-  cardinality = 0;
-  while(temp!="L[b]"){
-    infile >> temp;
-  }
-  infile >> temp; // read ":="
-  do{
-     infile >> temp >> cardinality;
-     if(temp!=";")
-       L.add(cardinality);
   }while(temp!=";");
   infile.close();
   

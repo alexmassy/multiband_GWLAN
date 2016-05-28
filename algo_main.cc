@@ -6,6 +6,23 @@
 ///Upper bound on the number of clock ticks that may be spent for solving a model.
 const clock_t tlimit = 7200;
 
+/// Reads a configuration file; finds robust, nominal and future-optimal solutions; computes statistics and saves the information in an output file.
+/**
+ * Here is the detailed list of steps:
+ * - Consistence of provided input arguments (input and output filenames plus the verbose flag) is checked;
+ * - All necessary information is fetched from a configuration file, calling the readData() function;
+ * - The robust model is created calling createRobAlgMILP(), then it is customized;
+ * - The nominal model is created calling createAlgILP(), then it is customized;
+ * - The nominal model, <b>given the future positions of UTs</b>,  is created calling again createAlgILP(), then it is customized;
+ * - Nominal and robust models are solved using the solve() function of the IloCplex class;
+ * - Nominal and robust solutions are checked if they are feasible in the future scenario (through checkFeasibility());
+ * - If at least the robust solution is still feasible, the nominal model computed in the fifth step is solved;
+ * - Power consumptions and computing times are computed for the nominal and the robust solution (in the present and in the future), calling computePowerConsumption() several times;
+ * - Power consumption of the optimal-future solution is computed (calling again computePowerConsumption());
+ * - Maximum power consumption is calculated;
+ * - Information is saved to the output file through the printResults() function;
+ * - Heap's space used for CPLEX data structures is deallocated.
+*/
 int main (int argc, char *argv[]) {
 
  if (argc!=4)
@@ -44,7 +61,6 @@ int main (int argc, char *argv[]) {
 
   IloInt K;
   IloNumArray H(simEnv);
-  IloNumArray L(simEnv);
   IloNum rho;
   vector<string> cs_vect;
   vector<string> ut_vect;
@@ -57,7 +73,7 @@ int main (int argc, char *argv[]) {
 
   //cout<<"Reading input.\n";
   
-  readData(simEnv, input_filename, K, H, L, rho, cs_vect, ut_vect, w, b, p_w, r_curr, r_min, r_future);
+  readData(simEnv, input_filename, K, H, rho, cs_vect, ut_vect, w, b, p_w, r_curr, r_min, r_future);
 
   /********** Algorithm ***********/
 
@@ -65,6 +81,22 @@ int main (int argc, char *argv[]) {
   IloInt numAPs = cs_vect.size();
   IloInt numUTs = ut_vect.size();
   IloInt numBands = H.getSize();  
+  
+  /*for(int i=0;i<numBands;i++)
+	  cout<<"H["<<i<<"] = "<<H[i]<<endl;
+  cout<<"\n\n";
+  for(int i=0; i<numUTs; i++){
+	  cout<<"UT"<<i+1<<"-";
+	  IloArray<IloNumArray> pippo = r_min[i];
+	  for(int j=0; j<numAPs; j++){
+		  cout<<"AP"<<j+1<<"=[";
+		  IloNumArray pluto = pippo[j];
+		  for(int k=0; k<numBands; k++)
+			  cout<<pluto[k]<<",";
+		  cout<<"]\n";
+	  }
+	  cout<<"\n\n";
+  }*/
   
   try {
  
@@ -75,13 +107,16 @@ int main (int argc, char *argv[]) {
     assignVarMx x(multibAlgEnv, numUTs);//no bouds specified
     IloIntVarArray y(multibAlgEnv, numAPs, 0, 1); //bounds already set (constraint 41) 
 
-    createMultibMILP(multibAlgMod, x, y, b, p_w, rho, w, r_curr, r_min, K, H, L);
+    createMultibMILP(multibAlgMod, x, y, b, p_w, rho, w, r_curr, r_min, K, H);
  
     IloCplex multibAlgCplex(multibAlgMod);
     
     // Silent Mode
     multibAlgCplex.setOut(multibAlgEnv.getNullStream());
     multibAlgCplex.setWarning(multibAlgEnv.getNullStream());
+    
+    //write report
+    //multibAlgCplex.exportModel("report_multiband.lp");
     
     // Set time limit
     multibAlgCplex.setParam(IloCplex::ClockType, 1); //0: automatic - 1: CPU time - 2: wall-clock
@@ -104,6 +139,10 @@ int main (int argc, char *argv[]) {
     // Silent Mode
     algCplex.setOut(algEnv.getNullStream());
     algCplex.setWarning(algEnv.getNullStream());
+    
+    //write report
+    //algCplex.exportModel("report_nominal.lp");
+    
     // Set time limit
     algCplex.setParam(IloCplex::ClockType, 1); //0: automatic - 1: CPU time - 2: wall-clock
     algCplex.setParam(IloCplex::TiLim, tlimit);
@@ -247,7 +286,7 @@ int main (int argc, char *argv[]) {
     if(nr_feasFlag)
       nrf_PowCons = computePowerConsumption(b, p_w, w, nr_xSol, nr_ySol, r_future);//nominal future P.C.
 
-    //Compute maximum power consumption (as if all were working at full time)
+    //Compute maximum power consumption (as if all were working at full power)
     IloNum max_PowCons = 0;
     for (j = 0; j < numAPs; j++) {
       max_PowCons += b[j] + p_w[j];
